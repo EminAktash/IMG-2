@@ -1,26 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Send, Mail } from "lucide-react";
+import { Send, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-// ============================================================================
-//  IMPORTANT — READ THIS TO MAKE THE FORM ACTUALLY EMAIL DEBRA
-// ----------------------------------------------------------------------------
-//  1. Go to https://web3forms.com
-//  2. Enter Debra's email (d.anazonwu@gmail.com) and click "Create Access Key".
-//  3. Web3Forms emails her an Access Key (a long string).
-//  4. Paste that key between the quotes below, replacing YOUR_ACCESS_KEY_HERE.
-//  Until you do this, the form will show an error instead of sending.
-//  Free tier = 250 submissions/month. Submissions land in Debra's inbox.
-// ============================================================================
-const WEB3FORMS_ACCESS_KEY = "YOUR_ACCESS_KEY_HERE";
+// Where inquiries go. Clicking "Send" opens the visitor's own email app
+// pre-addressed to Debra with all the fields filled in. No account or key needed.
+const DEBRA_EMAIL = "d.anazonwu@gmail.com";
 
 export function ContactForm() {
-  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -32,51 +23,35 @@ export function ContactForm() {
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       toast.error("Please fill in your name, email, and message.");
       return;
     }
-    setLoading(true);
-    try {
-      const res = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          access_key: WEB3FORMS_ACCESS_KEY,
-          subject: `New IMG Editors inquiry from ${form.name}`,
-          from_name: "IMG Editors Website",
-          replyto: form.email,
-          "Full Name": form.name,
-          Email: form.email,
-          "Intended Specialty": form.specialty || "—",
-          "USMLE Scores": form.scores || "—",
-          "Google Doc Draft": form.docLink || "—",
-          Message: form.message,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(
-          "Message sent successfully! Debra will review your inquiry within 48 hours.",
-        );
-        setForm({ name: "", email: "", specialty: "", scores: "", docLink: "", message: "" });
-      } else {
-        toast.error(
-          "Something went wrong sending your message. Please email d.anazonwu@gmail.com directly.",
-        );
-      }
-    } catch {
-      toast.error(
-        "Network error. Please check your connection or email d.anazonwu@gmail.com directly.",
-      );
-    } finally {
-      setLoading(false);
-    }
+
+    const subject = `New IMG Editors inquiry from ${form.name}`;
+    const body = [
+      `Name: ${form.name}`,
+      `Email: ${form.email}`,
+      `Intended Specialty: ${form.specialty || "—"}`,
+      `USMLE Scores: ${form.scores || "—"}`,
+      `Google Doc Draft: ${form.docLink || "—"}`,
+      "",
+      "Message:",
+      form.message,
+    ].join("\n");
+
+    const mailto = `mailto:${DEBRA_EMAIL}?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`;
+
+    // Open the visitor's email client with everything prefilled.
+    window.location.href = mailto;
+
+    toast.success(
+      "Your email app should now be open with your inquiry ready to send. Just hit send!",
+    );
   };
 
   return (
@@ -99,7 +74,7 @@ export function ContactForm() {
                 <Mail className="w-5 h-5" />
               </span>
               <div>
-                <div className="text-sm font-semibold text-primary">d.anazonwu@gmail.com</div>
+                <div className="text-sm font-semibold text-primary">{DEBRA_EMAIL}</div>
                 <div className="text-xs text-muted-foreground">We respond within 24 hours, every day.</div>
               </div>
             </div>
@@ -140,8 +115,8 @@ export function ContactForm() {
               <Label htmlFor="message">How can we help your application?</Label>
               <Textarea id="message" value={form.message} onChange={(e) => update("message", e.target.value)} rows={5} placeholder="Tell us about your goals, timeline, and any concerns…" maxLength={2000} />
             </div>
-            <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</> : <><Send className="w-4 h-4" /> Send Inquiry</>}
+            <Button type="submit" variant="hero" size="lg" className="w-full">
+              <Send className="w-4 h-4" /> Send Inquiry
             </Button>
           </motion.form>
         </div>
